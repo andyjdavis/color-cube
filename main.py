@@ -220,7 +220,7 @@ def setup_level(level):
         # blue barrier again but now there are cubes you must avoid
         barrier_color = (0, 0, 255)
         
-        pos = (20, g.height - g.block_size[1]/2)
+        pos = (20, g.height - 1 * spacing - g.block_size[1]/2)
         block = Sprite(pos, (g.block_move,0), (255,0,0), g.block_size)
         block_group.add(block)
         
@@ -228,7 +228,7 @@ def setup_level(level):
         block = Sprite(pos, (g.block_move,0), (0,255,0), g.block_size)
         block_group.add(block)
         
-        pos = (20, g.height - 2 * spacing - g.block_size[1]/2)
+        pos = (g.width/6, g.height - 2 * spacing - g.block_size[1]/2)
         block = Sprite(pos, (g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
     elif level == 3:
@@ -239,7 +239,7 @@ def setup_level(level):
         block = Sprite(pos, (g.block_move,0), (255,0,0), g.block_size)
         block_group.add(block)
         
-        pos = (g.width/2, g.height - g.block_size[1]/2)
+        pos = (g.width/3, g.height - 1 * spacing - g.block_size[1]/2)
         block = Sprite(pos, (-g.block_move,0), (0, 0, 255), g.block_size)
         block_group.add(block)
     elif level == 4:
@@ -269,7 +269,7 @@ def setup_level(level):
         block = Sprite(pos, (g.block_move,0), (0,255,0), g.block_size)
         block_group.add(block)
         
-        pos = (g.width/3, g.height - g.block_size[1]/2)
+        pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
         block = Sprite(pos, (g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
     elif level == 6:
@@ -284,7 +284,7 @@ def setup_level(level):
         block = Sprite(pos, (g.block_move,0), (0,255,0), g.block_size)
         block_group.add(block)
         
-        pos = (g.width/2, g.height - g.block_size[1]/2)
+        pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
         block = Sprite(pos, (g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
     elif level == 7:

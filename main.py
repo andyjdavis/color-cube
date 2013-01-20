@@ -1,3 +1,21 @@
+# This is a game called "Color Cube".
+#
+# Color Cube is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Color Cube is distributed in the hope that it will be useful and maybe even fun,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Color Cube.  If not, see <http://www.gnu.org/licenses/>.
+#
+# copyright  2013 onwards Andrew Davis
+# license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+
 import os, pygame
 from pygame.locals import *
 
@@ -15,7 +33,6 @@ def pos_to_rect(pos, size):
     return pygame.Rect(x, y, size[0], size[1])
 
 def color_combine(c1, c2):
-    #return ( (c1[0]+c2[0])/2, (c1[1]+c2[1])/2, (c1[2]+c2[2])/2,)
     return (c1[0]+c2[0], c1[1]+c2[1], c1[2]+c2[2])
 
 class Globals:
@@ -119,6 +136,8 @@ class Sprite(pygame.sprite.Sprite):
             
         self.rect = pos_to_rect(self.pos, self.size)
         if (self.player):
+            # Fill with white then draw a smaller rectangle of the player's current color.
+            # This is to give the appearance of having a border.
             self.image.fill((255,255,255))
             r_pos = (g.player_border_width, g.player_border_width)
             r_size = (g.block_size[0] - 2*g.player_border_width, g.block_size[1] - 2*g.player_border_width)
@@ -177,9 +196,6 @@ def key_down(k):
         setup_level(g.level)
 
 def key_up(k):
-    #if not g.playing:
-        #return
-
     if k == K_LEFT and player_block:
         player_block.vel[0] += g.block_move
         if (player_block.vel[0] > 0):
@@ -195,8 +211,7 @@ def setup_level(level):
     block_group.empty()
     platform_group.empty()
     barrier_group.empty()
-    
-    # some defaults levels can override
+
     exit_color = (255, 255, 255)
     exit_size = (50, 75)
     exit_pos = (g.width - exit_size[0]/2 - 10, g.height - exit_size[1]/2)
@@ -372,7 +387,7 @@ def draw_end_game_screen(screen):
         
         font = pygame.font.SysFont("arial",24)
         
-        text = font.render("You have escaped!!", g.text_antialias, g.text_color, g.text_bg_color)
+        text = font.render("Congratulations! You are truly a human color wheel.", g.text_antialias, g.text_color, g.text_bg_color)
         g.end_surface.blit(text, (10, 20))
         
         text = font.render("Press space to play again", g.text_antialias, g.text_color, g.text_bg_color)
@@ -405,11 +420,13 @@ def main():
         if g.state_splash:
             draw_splash(screen)
         elif g.state_playing:
+            # Updating exit just to get "exit" drawn. There must be a better way.
             exit.update()
-            #platforms, barriers and exits dont move so dont have to call update()
+            
+            #platforms and barriers dont move so dont have to call update()
             block_group.update()
             
-            # Any any blocks on a platform?
+            # Are any blocks on a platform?
             hits = group_group_collide(block_group, platform_group)
             if ( len(hits) > 0):
                 for block in hits:
@@ -419,8 +436,8 @@ def main():
                         if block.pos[1] < platform.pos[1]:
                             block.sitting_on = platform
                             block.pos[1] = platform.pos[1] - platform.size[1]/2 - block.size[1]/2
-                
-            # have any blocks hit a barrier?
+            
+            # Have any blocks hit a barrier?
             hits = group_group_collide(block_group, barrier_group)
             if ( len(hits) > 0):
                 for block in hits:
@@ -433,17 +450,16 @@ def main():
             if player_block:
                 player_block.update()
                 
-                # did the player touch a block?
+                # Did the player touch a block?
                 hits = group_collide(block_group, player_block, True)
                 for block in hits:
-                    #block.vel[0] *= -1
                     if player_block.color == g.player_start_color:
                         player_block.color = block.color
                     else:
                         player_block.color = color_combine(player_block.color, block.color)
                 
                 
-                # did the player touch a platform?
+                # Did the player touch a platform?
                 hits = group_collide(platform_group, player_block)
                 if ( len(hits) > 0):
                     for platform in hits:
@@ -452,7 +468,7 @@ def main():
                             player_block.sitting_on = platform
                             player_block.pos[1] = platform.pos[1] - platform.size[1]/2 - player_block.size[1]/2
                 
-                # did the player touch a barrier?
+                # Did the player touch a barrier?
                 hits = group_collide(barrier_group, player_block)
                 if ( len(hits) > 0):
                     for barrier in hits:
@@ -461,14 +477,14 @@ def main():
                             player_block.vel[0] = 0
                             player_block.pos[0] = barrier.pos[0] - barrier.size[0]/2 - player_block.size[0]/2
                 
-                # has the player reached the exit?
+                # Has the player reached the exit?
                 if player_block.rect.colliderect(exit.rect):
                     # player has reached the exit
                     g.level += 1
                     setup_level(g.level)
-        
+            
             screen.blit(bg, (0, 0))
-        
+            
             if exit:
                 draw_pos = pos_to_top_left(exit.pos, exit.size)
                 screen.blit(exit.image, draw_pos)

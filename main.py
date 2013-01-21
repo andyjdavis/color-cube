@@ -35,6 +35,20 @@ def pos_to_rect(pos, size):
 def color_combine(c1, c2):
     return (c1[0]+c2[0], c1[1]+c2[1], c1[2]+c2[2])
 
+def load_sound(name):
+    class NoneSound:
+        def play(self): pass
+    if not pygame.mixer or not pygame.mixer.get_init():
+        print 'pygame sound not available'
+        return NoneSound()
+    fullname = os.path.join('resources', name)
+    try:
+        sound = pygame.mixer.Sound(fullname)
+    except pygame.error, message:
+        print 'Cannot load sound:', fullname
+        raise SystemExit, message
+    return sound
+
 class Globals:
     
     def __init__(self):
@@ -66,6 +80,17 @@ class Globals:
         self.splash_surface = None
         self.end_surface = None
         self.splash_size = (400, 300)
+        
+        self.suck_sound = None
+        self.killed_sound = None
+        self.barrier_sound = None
+        self.cheer_sound = None
+    
+    def init_sound(self):
+        self.suck_sound = load_sound("81152__joedeshon__suck-pop-03.wav")
+        self.killed_sound = load_sound("62363__fons__zap-2.wav")
+        self.barrier_sound = load_sound("67454__splashdust__negativebeep.wav")
+        self.cheer_sound = load_sound("99636__tomlija__small-crowd-yelling-yeah.wav")
 
 class Sprite(pygame.sprite.Sprite):
     def __init__(self, pos, vel, color, size, player=False, text=None):
@@ -157,6 +182,13 @@ pygame.init()
 screen = pygame.display.set_mode((g.width, g.height))
 pygame.display.set_caption('Blocks')
 pygame.mouse.set_visible(0)
+
+g.init_sound()
+
+soundtrack_path = os.path.join('resources', 'Video Dungeon Crawl.mp3')
+pygame.mixer.music.load(soundtrack_path)
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.play()
 
 player_block = None
 exit = None
@@ -453,6 +485,7 @@ def main():
                 # Did the player touch a block?
                 hits = group_collide(block_group, player_block, True)
                 for block in hits:
+                    g.suck_sound.play()
                     if player_block.color == g.player_start_color:
                         player_block.color = block.color
                     else:
@@ -474,12 +507,14 @@ def main():
                     for barrier in hits:
                         if player_block.color != barrier.color:
                             # player cannot pass through
+                            g.barrier_sound.play()
                             player_block.vel[0] = 0
                             player_block.pos[0] = barrier.pos[0] - barrier.size[0]/2 - player_block.size[0]/2
                 
                 # Has the player reached the exit?
                 if player_block.rect.colliderect(exit.rect):
                     # player has reached the exit
+                    g.cheer_sound.play()
                     g.level += 1
                     setup_level(g.level)
             

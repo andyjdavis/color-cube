@@ -93,7 +93,7 @@ class Globals:
         self.cheer_sound = load_sound("99636__tomlija__small-crowd-yelling-yeah.wav")
 
 class Sprite(pygame.sprite.Sprite):
-    def __init__(self, pos, vel, color, size, player=False, text=None):
+    def __init__(self, pos, vel, color, size):
         pygame.sprite.Sprite.__init__(self)
         
         self.pos_previous = [pos[0],pos[1]]
@@ -101,15 +101,10 @@ class Sprite(pygame.sprite.Sprite):
         self.vel = [vel[0],vel[1]]
         self.color = color
         self.size  = size
-        self.player = player
-        self.text = text
-
+        
         self.sitting_on = False
         
         self.image = pygame.Surface(size).convert()
-        #platforms dont call update() so fill their image here
-        self.image.fill(self.color)
-        
         self.rect = pos_to_rect(self.pos, self.size)
     
     def over(self, platform):
@@ -117,7 +112,7 @@ class Sprite(pygame.sprite.Sprite):
         is_above = (self.pos[1] + self.size[1]/2) <= (platform.pos[1] - platform.size[1]/2)
         return was_above or is_above
     
-    def __revert_pos(self, stop, i):
+    def revert_position(self, stop, i):
         self.pos = list(self.pos_previous)
         if (stop):
             self.vel[i] = 0
@@ -125,17 +120,76 @@ class Sprite(pygame.sprite.Sprite):
             self.vel[i] = -self.vel[0]
     
     def update(self):
-        # record the old position before we start changing stuff
         self.pos_previous = list(self.pos)
-        
-        if not self.sitting_on:
-            self.vel[1] += g.gravity
         
         self.pos[0] = int( math.floor( self.pos[0] + self.vel[0] ) )
         self.pos[1] = int( math.floor( self.pos[1] + self.vel[1] ) )
+    
+    def gravity(self):
+        if not self.sitting_on:
+            self.vel[1] += g.gravity
         
-        # check if the player has moved off a platform
-        if (self.player and self.sitting_on):
+    def keep_onscreen(self, stop):
+        # stop sprites leaving the screen
+        if (self.pos[0] - self.size[0]/2) < 0:
+            self.revert_position(stop, 0)
+        elif (self.pos[0] + self.size[0]/2) > g.width:
+            self.revert_position(stop, 0)
+        elif (self.pos[1] - self.size[1]/2) < 0:
+            self.revert_position(True, 1)
+        elif (self.pos[1] + self.size[1]/2) > g.height:
+            self.revert_position(True, 1)
+        
+    def update_rect(self):
+        self.rect = pos_to_rect(self.pos, self.size)
+
+class Platform(Sprite):
+    def __init__(self, pos, vel, color, size):
+        Sprite.__init__(self, pos, vel, color, size)
+        self.image.fill(self.color)
+
+class Barrier(Sprite):
+    def __init__(self, pos, vel, color, size):
+        Sprite.__init__(self, pos, vel, color, size)
+        self.image.fill(self.color)
+        
+class Exit(Sprite):
+    def __init__(self, pos, vel, color, size):
+        Sprite.__init__(self, pos, vel, color, size)
+        self.image.fill(self.color)
+
+        font = pygame.font.SysFont("arial",24)
+        t = font.render('exit', g.text_antialias, (255, 0, 0), self.color)
+        self.image.blit(t, (5, 10))
+    
+class Block(Sprite):
+    def __init__(self, pos, vel, color, size):
+        Sprite.__init__(self, pos, vel, color, size)
+        self.image.fill(self.color)
+    
+    def update(self):
+        Sprite.update(self)
+        Sprite.keep_onscreen(self, False)
+        
+        # Blocks shouldn't run off the end of platforms
+        if self.sitting_on:
+            if (self.pos[0] + self.size[0]/2 > self.sitting_on.pos[0] + self.sitting_on.size[0]/2
+            or self.pos[0] - self.size[0]/2 < self.sitting_on.pos[0] - self.sitting_on.size[0]/2):
+                self.vel[0] *= -1
+        
+        Sprite.update_rect(self)
+    
+class Player(Sprite):
+    def __init__(self, pos, vel, color, size):
+        Sprite.__init__(self, pos, vel, color, size)
+    
+    def update(self):
+        Sprite.update(self)
+        Sprite.gravity(self)
+        Sprite.keep_onscreen(self, True)
+        
+        # check if the player has moved off the platform they're sitting on
+        if (self.sitting_on):
             offleft = (self.pos[0] + self.size[0]/2) < (self.sitting_on.pos[0] - self.sitting_on.size[0]/2)
             offright = (self.pos[0] - self.size[0]/2) > (self.sitting_on.pos[0] + self.sitting_on.size[0]/2)
             over = (self.pos[1] + self.size[1]/2) - (self.sitting_on.pos[1] - self.sitting_on.size[1]/2)
@@ -143,38 +197,32 @@ class Sprite(pygame.sprite.Sprite):
             if offleft or offright or over != 0:
                 self.sitting_on = False
         
-        # stop sprites leaving the screen
-        if (self.pos[0] - self.size[0]/2) < 0:
-            self.__revert_pos(self.player, 0)
-        elif (self.pos[0] + self.size[0]/2) > g.width:
-            self.__revert_pos(self.player, 0)
-        elif (self.pos[1] - self.size[1]/2) < 0:
-            self.__revert_pos(True, 1)
-        elif (self.pos[1] + self.size[1]/2) > g.height:
-            self.__revert_pos(True, 1)
-        else:
-            # stop nonplayer blocks running off the end of platforms
-            if not self.player and self.sitting_on:
-                if (self.pos[0] + self.size[0]/2 > self.sitting_on.pos[0] + self.sitting_on.size[0]/2
-                or self.pos[0] - self.size[0]/2 < self.sitting_on.pos[0] - self.sitting_on.size[0]/2):
-                    self.vel[0] *= -1
-            
-        self.rect = pos_to_rect(self.pos, self.size)
-        if (self.player):
-            # Fill with white then draw a smaller rectangle of the player's current color.
-            # This is to give the appearance of having a border.
-            self.image.fill((255,255,255))
-            r_pos = (g.player_border_width, g.player_border_width)
-            r_size = (g.block_size[0] - 2*g.player_border_width, g.block_size[1] - 2*g.player_border_width)
-            r = Rect(r_pos, r_size)
-            pygame.draw.rect(self.image, self.color, r)
-        else:
-            self.image.fill(self.color)
+        # Fill with white then draw a smaller rectangle of the player's current color.
+        # This is to give the appearance of having a border.
+        self.image.fill((255,255,255))
+        r_pos = (g.player_border_width, g.player_border_width)
+        r_size = (g.block_size[0] - 2*g.player_border_width, g.block_size[1] - 2*g.player_border_width)
+        r = Rect(r_pos, r_size)
+        pygame.draw.rect(self.image, self.color, r)
         
-        if (self.text):
-            font = pygame.font.SysFont("arial",24)
-            t = font.render(self.text, g.text_antialias, (255, 0, 0), self.color)
-            self.image.blit(t, (5, 10))
+        Sprite.update_rect(self)
+        
+class Ball(Sprite):
+    def __init__(self, pos, vel, color, radius):
+        Sprite.__init__(self, pos, vel, color, (radius,radius))
+        
+        self.image = pygame.Surface((radius,radius)).convert()
+        pygame.draw.circle(self.image, self.color, self.pos, self.size[0])
+    
+    def update(self):
+        Sprite.update(self)
+        Sprite.gravity(self)
+        Sprite.keep_onscreen(self, False)
+        
+        # todo logic to move the ball
+        
+        Sprite.update_rect(self)
+        
 
 g = Globals()
 
@@ -192,6 +240,7 @@ pygame.mixer.music.play()
 
 player_block = None
 exit = None
+ball = None
 
 block_group = pygame.sprite.RenderPlain()
 platform_group = pygame.sprite.RenderPlain()
@@ -238,7 +287,7 @@ def key_up(k):
             player_block.vel[0] = 0
 
 def setup_level(level):
-    global player_block, exit
+    global player_block, exit, ball
     
     block_group.empty()
     platform_group.empty()
@@ -261,112 +310,113 @@ def setup_level(level):
         barrier_color = (0, 0, 255)
         
         pos = (20, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,0,255), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
     elif level == 2:
         # blue barrier again but now there are cubes you must avoid
         barrier_color = (0, 0, 255)
         
         pos = (20, g.height - 1 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (255,0,0), g.block_size)
+        block = Block(pos, (g.block_move,0), (255,0,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width - 40, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,255,0), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width/6, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,0,255), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
     elif level == 3:
         # magenta barrier + red and blue cubes to introduce combining
         barrier_color = (255, 0, 255)
         
         pos = (g.width - 70, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (255,0,0), g.block_size)
+        block = Block(pos, (g.block_move,0), (255,0,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width/3, g.height - 1 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (-g.block_move,0), (0, 0, 255), g.block_size)
+        block = Block(pos, (-g.block_move,0), (0, 0, 255), g.block_size)
         block_group.add(block)
     elif level == 4:
         # yellow barrier
         barrier_color = (255, 255, 0)
         
         pos = (g.width - 30, g.height - 1 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (-g.block_move,0), (255,0,0), g.block_size)
+        block = Block(pos, (-g.block_move,0), (255,0,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width/8, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,255,0), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,0,255), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
     elif level == 5:
         # magenta barrier + red and blue plus a green cube to avoid
         barrier_color = (255, 0, 255)
         
         pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (-g.block_move,0), (255,0,0), g.block_size)
+        block = Block(pos, (-g.block_move,0), (255,0,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width - 90, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,255,0), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,0,255), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
     elif level == 6:
         # cyan barrier
         barrier_color = (0, 255, 255)
         
         pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (255,0,0), g.block_size)
+        block = Block(pos, (g.block_move,0), (255,0,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width - 100, g.height - 4 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,255,0), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,0,255), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
     elif level == 7:
         # white barrier
         barrier_color = (255, 255, 255)
         
         pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (255,0,0), g.block_size)
+        block = Block(pos, (g.block_move,0), (255,0,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width - 30, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Sprite(pos, (g.block_move,0), (0,255,0), g.block_size)
+        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
         block_group.add(block)
         
         pos = (g.width/2, g.height - g.block_size[1]/2)
-        block = Sprite(pos, (-g.block_move,0), (0,0,255), g.block_size)
+        block = Block(pos, (-g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
     else:
         g.state_playing = False
         g.state_over = True
         return
 
-    player_block = Sprite(player_pos, zero_vel, player_color, g.block_size, True)
+    player_block = Player(player_pos, zero_vel, player_color, g.block_size)
+    #ball = Ball((g.width/2, g.height/2), zero_vel, (255, 255, 255), g.block_size[0]*2)
     
-    exit = Sprite(exit_pos, zero_vel, exit_color, exit_size, False, "exit")
+    exit = Exit(exit_pos, zero_vel, exit_color, exit_size)
     
     last_y = None
     barrier_width = 3 * (g.width/7)
     for platform_y in range(spacing, g.height, spacing):
         pos = (barrier_width/2, platform_y)
-        platform = Sprite(pos, zero_vel, g.platform_color, (barrier_width , g.platform_thickness))
+        platform = Platform(pos, zero_vel, g.platform_color, (barrier_width , g.platform_thickness))
         platform_group.add(platform)
         
         pos = (g.width - barrier_width/2, platform_y)
-        platform = Sprite(pos, zero_vel, g.platform_color, (barrier_width , g.platform_thickness))
+        platform = Platform(pos, zero_vel, g.platform_color, (barrier_width , g.platform_thickness))
         platform_group.add(platform)
         
         last_y = platform_y
@@ -374,12 +424,12 @@ def setup_level(level):
     # the barrier to the exit
     barrier_size = (5, spacing)
     barrier_pos = (g.width - 2* exit_size[0], g.height - barrier_size[1]/2)
-    barrier = Sprite(barrier_pos, zero_vel, barrier_color, barrier_size)
+    barrier = Barrier(barrier_pos, zero_vel, barrier_color, barrier_size)
     barrier_group.add(barrier)
     
     # a platform along the bottom of the screen
     pos = (g.width/2, g.height - g.platform_thickness/2)
-    platform = Sprite(pos, zero_vel, g.platform_color, (g.width, g.platform_thickness))
+    platform = Platform(pos, zero_vel, g.platform_color, (g.width, g.platform_thickness))
     platform_group.add(platform)
 
 def draw_splash(screen):
@@ -452,11 +502,11 @@ def main():
         if g.state_splash:
             draw_splash(screen)
         elif g.state_playing:
-            # Updating exit just to get "exit" drawn. There must be a better way.
-            exit.update()
-            
-            #platforms and barriers dont move so dont have to call update()
+            #exit, platforms and barriers dont move so dont have to call update()
             block_group.update()
+            
+            if ball:
+                ball.update()
             
             # Are any blocks on a platform?
             hits = group_group_collide(block_group, platform_group)
@@ -530,6 +580,10 @@ def main():
             if player_block:
                 draw_pos = pos_to_top_left(player_block.pos, player_block.size)
                 screen.blit(player_block.image, draw_pos)
+            
+            if ball:
+                draw_pos = pos_to_top_left(ball.pos, ball.size)
+                screen.blit(ball.image, draw_pos)
         elif g.state_over:
             draw_end_game_screen(screen)
 

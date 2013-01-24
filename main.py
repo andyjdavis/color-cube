@@ -63,6 +63,8 @@ class Globals:
         self.block_move = 3
         self.gravity = 0.2
         
+        self.ball_move = self.block_move * 0.25
+        
         self.player_border_width = 4
         self.player_start_color = (0, 0, 0)
         
@@ -79,7 +81,7 @@ class Globals:
         
         self.splash_surface = None
         self.end_surface = None
-        self.splash_size = (400, 300)
+        self.splash_size = (600, 400)
         
         self.suck_sound = None
         self.killed_sound = None
@@ -112,6 +114,15 @@ class Sprite(pygame.sprite.Sprite):
         if self.vel[1] == 0:
             self.vel[1] = g.block_jump * multiplier
             self.sitting_on = False
+    
+    def check_if_moved_off_platform(self):
+        if (self.sitting_on):
+            offleft = (self.pos[0] + self.size[0]/2) < (self.sitting_on.pos[0] - self.sitting_on.size[0]/2)
+            offright = (self.pos[0] - self.size[0]/2) > (self.sitting_on.pos[0] + self.sitting_on.size[0]/2)
+            over = (self.pos[1] + self.size[1]/2) - (self.sitting_on.pos[1] - self.sitting_on.size[1]/2)
+            
+            if offleft or offright or over != 0:
+                self.sitting_on = False
 
     def over(self, platform):
         was_above = (self.pos_previous[1] + self.size[1]/2) <= (platform.pos[1] - platform.size[1]/2)
@@ -193,15 +204,7 @@ class Player(Sprite):
         Sprite.update_pos(self)
         Sprite.gravity(self)
         Sprite.keep_onscreen(self, True)
-        
-        # check if the player has moved off the platform they're sitting on
-        if (self.sitting_on):
-            offleft = (self.pos[0] + self.size[0]/2) < (self.sitting_on.pos[0] - self.sitting_on.size[0]/2)
-            offright = (self.pos[0] - self.size[0]/2) > (self.sitting_on.pos[0] + self.sitting_on.size[0]/2)
-            over = (self.pos[1] + self.size[1]/2) - (self.sitting_on.pos[1] - self.sitting_on.size[1]/2)
-            
-            if offleft or offright or over != 0:
-                self.sitting_on = False
+        Sprite.check_if_moved_off_platform(self)
         
         # Fill with white then draw a smaller rectangle of the player's current color.
         # This is to give the appearance of having a border.
@@ -221,13 +224,14 @@ class Ball(Sprite):
         Sprite.update_pos(self)
         Sprite.gravity(self)
         Sprite.keep_onscreen(self, False)
+        Sprite.check_if_moved_off_platform(self)
         
         # only let the ball change direction when it bounces
         if self.vel[1] == 0:
             if (player_block.pos[0] < self.pos[0]):
-                self.vel[0] = -g.block_move/2
+                self.vel[0] = -g.ball_move
             else:
-                self.vel[0] = g.block_move/2
+                self.vel[0] = g.ball_move
         
         if (player_block.pos[1] < self.pos[1]):
             Sprite.jump(self)
@@ -419,8 +423,8 @@ def setup_level(level):
         return
 
     player_block = Player(player_pos, zero_vel, player_color, g.block_size)
-    if want_ball:
-        ball = Ball((g.width/2, g.height/2), zero_vel, (255, 255, 255), g.block_size[0])
+    #if want_ball:
+        #ball = Ball((g.width/2, g.height/2), zero_vel, (255, 255, 255), g.block_size[0])
     
     exit = Exit(exit_pos, zero_vel, exit_color, exit_size)
     
@@ -483,7 +487,7 @@ def draw_end_game_screen(screen):
     if not g.end_surface:
         g.end_surface = pygame.Surface(g.splash_size).convert()
         
-        font = pygame.font.SysFont("arial",24)
+        font = pygame.font.SysFont("arial",18)
         
         text = font.render("Congratulations! You are truly a human color wheel.", g.text_antialias, g.text_color, g.text_bg_color)
         g.end_surface.blit(text, (10, 20))
@@ -528,6 +532,13 @@ def main():
             
             if ball:
                 ball.update()
+                
+                # Did the ball touch a platform?
+                hits = group_collide(platform_group, ball)
+                if ( len(hits) > 0):
+                    for platform in hits:
+                        if ball.over(platform):
+                            sprite_on_platform(ball, platform)
             
             # Are any blocks on a platform?
             hits = group_group_collide(block_group, platform_group)

@@ -107,19 +107,25 @@ class Sprite(pygame.sprite.Sprite):
         self.image = pygame.Surface(size).convert()
         self.rect = pos_to_rect(self.pos, self.size)
     
+    def jump(self, multiplier=1):
+        # can only jump when not already in the air
+        if self.vel[1] == 0:
+            self.vel[1] = g.block_jump * multiplier
+            self.sitting_on = False
+
     def over(self, platform):
         was_above = (self.pos_previous[1] + self.size[1]/2) <= (platform.pos[1] - platform.size[1]/2)
         is_above = (self.pos[1] + self.size[1]/2) <= (platform.pos[1] - platform.size[1]/2)
         return was_above or is_above
     
-    def revert_position(self, stop, i):
+    def revert_pos(self, stop, i):
         self.pos = list(self.pos_previous)
         if (stop):
             self.vel[i] = 0
         else:
             self.vel[i] = -self.vel[0]
     
-    def update(self):
+    def update_pos(self):
         self.pos_previous = list(self.pos)
         
         self.pos[0] = int( math.floor( self.pos[0] + self.vel[0] ) )
@@ -132,13 +138,13 @@ class Sprite(pygame.sprite.Sprite):
     def keep_onscreen(self, stop):
         # stop sprites leaving the screen
         if (self.pos[0] - self.size[0]/2) < 0:
-            self.revert_position(stop, 0)
+            self.revert_pos(stop, 0)
         elif (self.pos[0] + self.size[0]/2) > g.width:
-            self.revert_position(stop, 0)
+            self.revert_pos(stop, 0)
         elif (self.pos[1] - self.size[1]/2) < 0:
-            self.revert_position(True, 1)
+            self.revert_pos(True, 1)
         elif (self.pos[1] + self.size[1]/2) > g.height:
-            self.revert_position(True, 1)
+            self.revert_pos(True, 1)
         
     def update_rect(self):
         self.rect = pos_to_rect(self.pos, self.size)
@@ -168,7 +174,7 @@ class Block(Sprite):
         self.image.fill(self.color)
     
     def update(self):
-        Sprite.update(self)
+        Sprite.update_pos(self)
         Sprite.keep_onscreen(self, False)
         
         # Blocks shouldn't run off the end of platforms
@@ -184,7 +190,7 @@ class Player(Sprite):
         Sprite.__init__(self, pos, vel, color, size)
     
     def update(self):
-        Sprite.update(self)
+        Sprite.update_pos(self)
         Sprite.gravity(self)
         Sprite.keep_onscreen(self, True)
         
@@ -210,19 +216,25 @@ class Player(Sprite):
 class Ball(Sprite):
     def __init__(self, pos, vel, color, radius):
         Sprite.__init__(self, pos, vel, color, (radius,radius))
-        
-        self.image = pygame.Surface((radius,radius)).convert()
-        pygame.draw.circle(self.image, self.color, self.pos, self.size[0])
     
     def update(self):
-        Sprite.update(self)
+        Sprite.update_pos(self)
         Sprite.gravity(self)
         Sprite.keep_onscreen(self, False)
         
-        # todo logic to move the ball
+        # only let the ball change direction when it bounces
+        if self.vel[1] == 0:
+            if (player_block.pos[0] < self.pos[0]):
+                self.vel[0] = -g.block_move/2
+            else:
+                self.vel[0] = g.block_move/2
+        
+        if (player_block.pos[1] < self.pos[1]):
+            Sprite.jump(self)
+
+        pygame.draw.circle(self.image, self.color, (self.size[0]/2,self.size[1]/2), self.size[0]/2)
         
         Sprite.update_rect(self)
-        
 
 g = Globals()
 
@@ -270,9 +282,8 @@ def key_down(k):
         player_block.vel[0] -= g.block_move
     elif k == K_RIGHT and player_block:
         player_block.vel[0] += g.block_move
-    elif k == K_SPACE and player_block and player_block.vel[1] == 0:
-        player_block.vel[1] = g.block_jump
-        player_block.sitting = False
+    elif k == K_SPACE and player_block:
+        player_block.jump()
     elif k == K_r:
         setup_level(g.level)
 
@@ -304,6 +315,8 @@ def setup_level(level):
     
     zero_vel = (0,0)
     spacing = 3 * g.block_size[1] # platform spacing
+    
+    want_ball = False
 
     if level == 1:
         # simple level. just a blue cube and a blue barrier
@@ -312,6 +325,8 @@ def setup_level(level):
         pos = (20, g.height - 2 * spacing - g.block_size[1]/2)
         block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
         block_group.add(block)
+        
+        want_ball = True
     elif level == 2:
         # blue barrier again but now there are cubes you must avoid
         barrier_color = (0, 0, 255)
@@ -404,7 +419,8 @@ def setup_level(level):
         return
 
     player_block = Player(player_pos, zero_vel, player_color, g.block_size)
-    #ball = Ball((g.width/2, g.height/2), zero_vel, (255, 255, 255), g.block_size[0]*2)
+    if want_ball:
+        ball = Ball((g.width/2, g.height/2), zero_vel, (255, 255, 255), g.block_size[0])
     
     exit = Exit(exit_pos, zero_vel, exit_color, exit_size)
     
@@ -478,6 +494,11 @@ def draw_end_game_screen(screen):
     dest_rect = pygame.Rect((g.width/2) - (g.splash_size[0]/2), (g.height/2) - (g.splash_size[1]/2), g.splash_size[0], g.splash_size[1])
     screen.blit(g.end_surface, dest_rect)
 
+def sprite_on_platform(sprite, platform):
+    sprite.sitting_on = platform
+    sprite.vel[1] = 0
+    sprite.pos[1] = platform.pos[1] - platform.size[1]/2 - sprite.size[1]/2
+
 def main():
     clock = pygame.time.Clock()
     
@@ -514,10 +535,8 @@ def main():
                 for block in hits:
                     platform = hits[block][0]
                     if block.sitting_on != platform:
-                        block.vel[1] = 0
                         if block.pos[1] < platform.pos[1]:
-                            block.sitting_on = platform
-                            block.pos[1] = platform.pos[1] - platform.size[1]/2 - block.size[1]/2
+                            sprite_on_platform(block, platform)
             
             # Have any blocks hit a barrier?
             hits = group_group_collide(block_group, barrier_group)
@@ -547,9 +566,7 @@ def main():
                 if ( len(hits) > 0):
                     for platform in hits:
                         if player_block.over(platform):
-                            player_block.vel[1] = 0
-                            player_block.sitting_on = platform
-                            player_block.pos[1] = platform.pos[1] - platform.size[1]/2 - player_block.size[1]/2
+                            sprite_on_platform(player_block, platform)
                 
                 # Did the player touch a barrier?
                 hits = group_collide(barrier_group, player_block)

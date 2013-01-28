@@ -271,16 +271,16 @@ def group_group_collide(group1, group2, dokill=False):
 def key_down(k):
     if g.state_splash:
         if k == K_SPACE:
-            setup_level(g.level)
             g.state_splash = False
             g.state_playing = True
+            setup_level(g.level)
             return
     elif g.state_over:
         if k == K_SPACE:
             g.level = 1
-            setup_level(g.level)
             g.state_over = False
             g.state_playing = True
+            setup_level(g.level)
 
     if k == K_LEFT and player_block:
         player_block.vel[0] -= g.block_move
@@ -321,106 +321,89 @@ def setup_level(level):
     spacing = 3 * g.block_size[1] # platform spacing
     
     want_ball = False
+    
+    red_pos = green_pos = blue_pos = None
 
     if level == 1:
-        # simple level. just a blue cube and a blue barrier
+        # A blue cube, a red cube and a blue barrier
         barrier_color = (0, 0, 255)
         
-        pos = (20, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
-        block_group.add(block)
-        
-        want_ball = True
+        blue_pos = (20, g.height - 2 * spacing - g.block_size[1]/2)
+        red_pos  = (g.width - 20, g.height - 2 * spacing - g.block_size[1]/2)
+
     elif level == 2:
-        # blue barrier again but now there are cubes you must avoid
-        barrier_color = (0, 0, 255)
+        # red barrier
+        barrier_color = (255, 0, 0)
         
-        pos = (20, g.height - 1 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (255,0,0), g.block_size)
-        block_group.add(block)
+        red_pos = (20, g.height - 4 * spacing - g.block_size[1]/2)
+        green_pos = (g.width - 40, g.height - 3 * spacing - g.block_size[1]/2)
+        blue_pos = (g.width/6, g.height - 2 * spacing - g.block_size[1]/2)
         
-        pos = (g.width - 40, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
-        block_group.add(block)
-        
-        pos = (g.width/6, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
-        block_group.add(block)
     elif level == 3:
-        # magenta barrier + red and blue cubes to introduce combining
+        # green barrier
+        barrier_color = (0, 255, 0)
+        
+        red_pos = (60, g.height - 3 * spacing - g.block_size[1]/2)
+        green_pos = (70, g.height - 2 * spacing - g.block_size[1]/2)
+        blue_pos = (g.width/5, g.height - 1 * spacing - g.block_size[1]/2)
+        
+    elif level == 4:
+        # magenta barrier
         barrier_color = (255, 0, 255)
         
-        pos = (g.width - 70, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (255,0,0), g.block_size)
-        block_group.add(block)
-        
-        pos = (g.width/3, g.height - 1 * spacing - g.block_size[1]/2)
-        block = Block(pos, (-g.block_move,0), (0, 0, 255), g.block_size)
-        block_group.add(block)
-    elif level == 4:
+        red_pos = (g.width - 70, g.height - 3 * spacing - g.block_size[1]/2)
+        green_pos = (70, g.height - 3 * spacing - g.block_size[1]/2)
+        blue_pos = (g.width/3, g.height - 1 * spacing - g.block_size[1]/2)
+
+    elif level == 5:
         # yellow barrier
         barrier_color = (255, 255, 0)
         
-        pos = (g.width - 30, g.height - 1 * spacing - g.block_size[1]/2)
-        block = Block(pos, (-g.block_move,0), (255,0,0), g.block_size)
-        block_group.add(block)
+        red_pos = (g.width - 30, g.height - 1 * spacing - g.block_size[1]/2)
+        green_pos = (g.width/8, g.height - 2 * spacing - g.block_size[1]/2)
+        blue_pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
         
-        pos = (g.width/8, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
-        block_group.add(block)
-        
-        pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
-        block_group.add(block)
-    elif level == 5:
+    elif level == 6:
         # magenta barrier + red and blue plus a green cube to avoid
         barrier_color = (255, 0, 255)
         
-        pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Block(pos, (-g.block_move,0), (255,0,0), g.block_size)
-        block_group.add(block)
-        
-        pos = (g.width - 90, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
-        block_group.add(block)
-        
-        pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
-        block_group.add(block)
-    elif level == 6:
+        red_pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)        
+        green_pos = (g.width - 90, g.height - 3 * spacing - g.block_size[1]/2)
+        blue_pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
+
+    elif level == 7:
         # cyan barrier
         barrier_color = (0, 255, 255)
         
-        pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (255,0,0), g.block_size)
-        block_group.add(block)
+        red_pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
+        green_pos = (g.width - 100, g.height - 4 * spacing - g.block_size[1]/2)
+        blue_pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
         
-        pos = (g.width - 100, g.height - 4 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
-        block_group.add(block)
-        
-        pos = (g.width/3, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,0,255), g.block_size)
-        block_group.add(block)
-    elif level == 7:
+    elif level == 8:
         # white barrier
         barrier_color = (255, 255, 255)
         
-        pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (255,0,0), g.block_size)
-        block_group.add(block)
+        red_pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
+        green_pos = (g.width - 30, g.height - 2 * spacing - g.block_size[1]/2)
+        blue_pos = (g.width/2, g.height - 4 * spacing  g.block_size[1]/2)
         
-        pos = (g.width - 30, g.height - 2 * spacing - g.block_size[1]/2)
-        block = Block(pos, (g.block_move,0), (0,255,0), g.block_size)
-        block_group.add(block)
-        
-        pos = (g.width/2, g.height - g.block_size[1]/2)
-        block = Block(pos, (-g.block_move,0), (0,0,255), g.block_size)
-        block_group.add(block)
     else:
         g.state_playing = False
         g.state_over = True
         return
+    
+    if g.state_playing:
+        if red_pos:
+            block = Block(red_pos, (g.block_move,0), (255,0,0), g.block_size)
+            block_group.add(block)
+        
+        if green_pos:
+            block = Block(green_pos, (g.block_move,0), (0,255,0), g.block_size)
+            block_group.add(block)
+        
+        if blue_pos:
+            block = Block(blue_pos, (g.block_move,0), (0,0,255), g.block_size)
+            block_group.add(block)
 
     player_block = Player(player_pos, zero_vel, player_color, g.block_size)
     #if want_ball:

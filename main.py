@@ -386,7 +386,7 @@ def setup_level(level):
         
         red_pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
         green_pos = (g.width - 30, g.height - 2 * spacing - g.block_size[1]/2)
-        blue_pos = (g.width/2, g.height - 4 * spacing - g.block_size[1]/2)
+        blue_pos = (g.width/4, g.height - 4 * spacing - g.block_size[1]/2)
         
     else:
         g.state_playing = False

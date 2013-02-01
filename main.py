@@ -24,6 +24,7 @@ if not pygame.mixer: print 'Warning, sound disabled'
 
 import math
 import random
+import sys
 
 def pos_to_top_left(pos, size):
     return (pos[0] - (size[0]/2), pos[1] - (size[1]/2))
@@ -89,10 +90,10 @@ class Globals:
         self.cheer_sound = None
     
     def init_sound(self):
-        self.suck_sound = load_sound("81152__joedeshon__suck-pop-03.wav")
-        self.killed_sound = load_sound("62363__fons__zap-2.wav")
-        self.barrier_sound = load_sound("67454__splashdust__negativebeep.wav")
-        self.cheer_sound = load_sound("99636__tomlija__small-crowd-yelling-yeah.wav")
+        self.suck_sound = load_sound("suck.wav")
+        self.killed_sound = load_sound("zap.wav")
+        self.barrier_sound = load_sound("barrier.wav")
+        self.cheer_sound = load_sound("yeah.wav")
 
 class Sprite(pygame.sprite.Sprite):
     def __init__(self, pos, vel, color, size):
@@ -249,7 +250,7 @@ pygame.mouse.set_visible(0)
 
 g.init_sound()
 
-soundtrack_path = os.path.join('resources', 'Video Dungeon Crawl.mp3')
+soundtrack_path = os.path.join('resources', 'music.mp3')
 pygame.mixer.music.load(soundtrack_path)
 pygame.mixer.music.set_volume(0.5)
 pygame.mixer.music.play()
@@ -385,7 +386,7 @@ def setup_level(level):
         
         red_pos = (g.width/8, g.height - 3 * spacing - g.block_size[1]/2)
         green_pos = (g.width - 30, g.height - 2 * spacing - g.block_size[1]/2)
-        blue_pos = (g.width/2, g.height - 4 * spacing  g.block_size[1]/2)
+        blue_pos = (g.width/2, g.height - 4 * spacing - g.block_size[1]/2)
         
     else:
         g.state_playing = False

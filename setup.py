@@ -10,5 +10,5 @@ setup(
     description = 'A game about a colorless cube',
     author = 'Andrew Davis',
     options = {"build_exe": build_exe_options}, 
-	executables = [Executable('main.py', targetName="ColorCube.exe")]
+	executables = [Executable('main.py', icon = "ColorCube.ico", targetName="ColorCube.exe")]
 )

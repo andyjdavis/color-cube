@@ -6,9 +6,9 @@ build_exe_options = {"packages": ["os"], "excludes": ["tkinter"], 'include_files
 
 setup(
     name = 'ColorCube',
-    version = '0.1',
+    version = '1.0',
     description = 'A game about a colorless cube',
     author = 'Andrew Davis',
     options = {"build_exe": build_exe_options}, 
-	executables = [Executable('main.py', icon = "ColorCube.ico", targetName="ColorCube.exe")]
+	executables = [Executable(script="main.py", base="Win32GUI", icon = "ColorCube.ico", targetName="ColorCube.exe")]
 )
